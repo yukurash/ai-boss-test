@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI上司耐性試験 — 管制室ダッシュボード</title>
+<meta name="description" content="Fable 5 と Opus 4.8 を PM にしたマルチエージェント実験ログの再生・比較ダッシュボード">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2314181d'/%3E%3Ccircle cx='5' cy='8' r='2.4' fill='%233987e5'/%3E%3Ccircle cx='11' cy='8' r='2.4' fill='%23d55181'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./dashboard.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="beacon" aria-hidden="true"></span>
+    <span class="brand-title">AI上司耐性試験</span>
+    <span class="brand-sub">管制室ダッシュボード</span>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="アーム切替">
+    <button class="tab" role="tab" id="tab-fable5" data-arm="fable5" aria-selected="false">Fable 5</button>
+    <button class="tab" role="tab" id="tab-opus48" data-arm="opus48" aria-selected="false">Opus 4.8</button>
+    <button class="tab" role="tab" id="tab-planning" data-arm="planning" aria-selected="false">Making of</button>
+  </nav>
+</header>
+
+<main id="app">
+  <section id="notice" class="card notice" hidden></section>
+
+  <section id="summary" class="card" aria-label="サマリ">
+    <div class="card-head">
+      <h2>ラン概況</h2>
+      <div id="meta-line" class="meta-line"></div>
+    </div>
+    <div id="kpi-row" class="kpi-row"></div>
+    <div class="summary-grid">
+      <div>
+        <h3>レーン別トークン(input+output)</h3>
+        <div class="table-wrap"><table id="lane-table" class="lane-table"></table></div>
+        <p class="fine">合計 = input_tokens + output_tokens。cache read/creation は参考列(コスト構造が異なるため合計に含めない)。</p>
+      </div>
+      <div>
+        <h3>公開ツール(tools_exposed)</h3>
+        <div id="tools-chips" class="chips"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="timeline-card" class="card" aria-label="レーン別タイムライン">
+    <div class="card-head">
+      <h2>レーン別タイムライン</h2>
+      <div id="tl-legend" class="legend"></div>
+    </div>
+    <div id="timeline-wrap" class="viz-wrap"></div>
+    <p class="fine">バー = 部下エージェントの稼働区間(task_spawn 〜 レーン最終イベント)。マーカーにホバー/フォーカスで詳細。背景クリックで時刻カーソルを移動。</p>
+  </section>
+
+  <section id="playback-card" class="card" aria-label="イベントフィードと再生">
+    <div class="card-head">
+      <h2>イベントフィード / 再生</h2>
+      <div id="feed-count" class="meta-line"></div>
+    </div>
+    <div class="controls">
+      <button id="btn-play" class="btn" aria-label="再生 / 一時停止">▶ 再生</button>
+      <div class="speed-group" role="group" aria-label="再生倍速">
+        <button class="btn speed" data-speed="10">x10</button>
+        <button class="btn speed" data-speed="60">x60</button>
+      </div>
+      <input id="scrub" type="range" min="0" max="100" step="0.5" value="100" aria-label="時刻カーソル">
+      <div id="clock" class="clock">T+00:00</div>
+    </div>
+    <div id="feed" class="feed" tabindex="0" aria-label="イベントリスト(カーソル時刻まで)"></div>
+  </section>
+
+  <section id="tokens-card" class="card" aria-label="レーン別トークン推移">
+    <div class="card-head">
+      <h2>レーン別トークン推移(累積 input+output)</h2>
+      <div id="tk-legend" class="legend"></div>
+    </div>
+    <div id="tokens-wrap" class="viz-wrap"></div>
+  </section>
+
+  <section id="heatmap-card" class="card" aria-label="活動ヒートマップ">
+    <div class="card-head">
+      <h2>活動ヒートマップ(レーン × 時間ビンのイベント数)</h2>
+      <div id="hm-legend" class="legend"></div>
+    </div>
+    <div id="heatmap-wrap" class="viz-wrap"></div>
+  </section>
+
+  <aside class="card note" aria-label="注記">
+    <h2>注記(読み方の前提)</h2>
+    <ul>
+      <li>これは <strong>n=1 の観察記録</strong>であり、公平な統計比較ではありません。</li>
+      <li>部下エージェントは両アームとも <strong>Sonnet 固定</strong>。変えたのは PM(上司)のモデルのみです。</li>
+      <li>部下の完了報告は観察者が手動で中継したため、PM レーンの「待ち」区間には<strong>中継遅延が混入</strong>しています。待ち時間・総経過はモデル差の指標になりません。</li>
+      <li>実験手順・逸脱の詳細: <a href="./RULES.md">RULES.md</a> / 比較の結論: <a href="./results/comparison.md">results/comparison.md</a></li>
+    </ul>
+  </aside>
+
+  <footer class="footer">
+    <span id="foot-src"></span>
+  </footer>
+</main>
+
+<div id="tooltip" class="tooltip" role="status" hidden></div>
+<script src="./dashboard.js"></script>
+</body>
+</html>

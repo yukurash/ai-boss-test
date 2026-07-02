@@ -1,19 +1,17 @@
-# Sealed until after both runs (hashes are pre-registered in RULES.md)
-ANSWERS.md
-interventions/spec-change.md
-
-# Generated data stays unpublished until after BOTH runs complete.
-# Rationale: planning-meeting.json explains the trap design, and run outputs
-# could give a web-browsing PM model an advantage mid-run (diff-attack risk).
-# Un-ignore on publication day (7/15-16) once both runs are done.
-data/
+# Raw session logs and run workspaces stay private.
+# Only the sanitized JSON under data/ is published.
+runs/
 
 # Article drafts stay local (never published in this repo)
 article/
 
-# Raw logs and run workspaces (only sanitized JSON under data/ is public)
-runs/
-
 # OS noise
 Thumbs.db
 Desktop.ini
+
+# --- Publish gate opened 2026-07-02 (both arms complete) ---
+# Previously sealed until after both runs; hashes were pre-registered in RULES.md
+# and verified to match on unseal:
+#   ANSWERS.md                     -> 12e93c87de14bdd5e24270f7492cd36a12f9534d227e9fdd55d6cf46e7323b39
+#   interventions/spec-change.md   -> 7fb3d0bfe368f05a31ab9f2b32604016959dca31e04e7e1f167d3dc383aa8152
+# data/ (sanitized run logs) is now published for the live dashboard.

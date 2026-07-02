@@ -1,0 +1,206 @@
+/* 管制室ダッシュボード — dark control-room theme (selected dark mode, not a flip) */
+:root {
+  --page: #0e1116;
+  --surface: #14181d;
+  --surface-2: #191f26;
+  --hairline: #262d36;
+  --baseline: #333b46;
+  --ink: #e8eaed;
+  --ink-2: #a9b1bb;
+  --muted: #79828e;
+  --accent: #3987e5;
+  --good: #0ca30c;
+  --warn: #c98500;
+  --critical: #d03b3b;
+  /* lane categorical slots (validated, dark) */
+  --lane-1: #3987e5;
+  --lane-2: #199e70;
+  --lane-3: #c98500;
+  --lane-4: #9085e9;
+  --lane-5: #d55181;
+  --lane-6: #d95926;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.55 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+}
+a { color: var(--accent); }
+
+.topbar {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: center; justify-content: space-between;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 20;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand-title { font-size: 17px; font-weight: 700; letter-spacing: .02em; }
+.brand-sub { color: var(--ink-2); font-size: 12.5px; }
+.beacon {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--good); align-self: center;
+  box-shadow: 0 0 6px 1px rgba(12,163,12,.55);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .beacon { animation: none; } }
+
+.tabs { display: flex; gap: 6px; }
+.tab {
+  background: transparent; color: var(--ink-2);
+  border: 1px solid var(--hairline); border-radius: 8px;
+  padding: 7px 16px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.tab:hover { color: var(--ink); background: var(--surface-2); }
+.tab[aria-selected="true"] {
+  color: var(--ink); background: var(--surface-2);
+  border-color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+#app { max-width: 1180px; margin: 0 auto; padding: 18px 22px 40px; display: grid; gap: 16px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.card-head {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px;
+}
+h2 { font-size: 15px; margin: 0; letter-spacing: .02em; }
+h3 { font-size: 13px; margin: 6px 0 8px; color: var(--ink-2); font-weight: 600; }
+.meta-line { color: var(--muted); font-size: 12px; }
+.fine { color: var(--muted); font-size: 11.5px; margin: 8px 0 0; }
+
+.notice { border-color: var(--warn); color: var(--ink-2); }
+.notice strong { color: var(--ink); }
+
+/* KPI tiles */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi {
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  border-radius: 10px; padding: 10px 12px;
+}
+.kpi .k-label { color: var(--muted); font-size: 11.5px; }
+.kpi .k-value { font-size: 22px; font-weight: 650; margin-top: 2px; }
+.kpi .k-sub { color: var(--ink-2); font-size: 11px; margin-top: 2px; }
+
+.summary-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; }
+@media (max-width: 860px) { .summary-grid { grid-template-columns: 1fr; } }
+
+.table-wrap { overflow-x: auto; }
+.lane-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.lane-table th, .lane-table td {
+  padding: 5px 10px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--hairline);
+  font-variant-numeric: tabular-nums;
+}
+.lane-table th { color: var(--muted); font-weight: 600; }
+.lane-table th:first-child, .lane-table td:first-child { text-align: left; }
+.lane-table td:first-child { color: var(--ink); }
+.lane-key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  border-radius: 999px; padding: 3px 11px;
+  font-size: 12px; color: var(--ink-2);
+}
+
+/* legends */
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--ink-2); }
+.legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 9px; height: 9px; border-radius: 50%; }
+.legend .sw.bar { width: 14px; height: 8px; border-radius: 3px; }
+.legend .sw.line { width: 14px; height: 2px; border-radius: 1px; }
+
+.viz-wrap { overflow-x: auto; }
+.viz-wrap svg { display: block; }
+
+/* playback */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+.btn {
+  background: var(--surface-2); color: var(--ink);
+  border: 1px solid var(--hairline); border-radius: 8px;
+  padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.btn:hover { border-color: var(--baseline); }
+.speed-group { display: inline-flex; gap: 4px; }
+.btn.speed { color: var(--ink-2); padding: 6px 10px; }
+.btn.speed[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+#scrub { flex: 1 1 200px; min-width: 140px; accent-color: var(--accent); }
+.clock {
+  font-variant-numeric: tabular-nums; font-weight: 650;
+  color: var(--ink); min-width: 150px; text-align: right; font-size: 13px;
+}
+
+.feed {
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--hairline); border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+.feed:focus-visible { outline: 2px solid var(--accent); }
+.feedrow {
+  display: grid; grid-template-columns: 74px 170px 128px minmax(0, 1fr);
+  gap: 10px; padding: 4px 10px;
+  border-bottom: 1px solid var(--hairline);
+  border-left: 3px solid transparent;
+  align-items: baseline;
+}
+.feedrow:last-child { border-bottom: none; }
+.feedrow .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+.feedrow .lane { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feedrow .lane .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.feedrow .cls { color: var(--ink-2); white-space: nowrap; }
+.feedrow .ex { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feedrow.hot .cls { color: var(--ink); font-weight: 600; }
+@media (max-width: 760px) {
+  .feedrow { grid-template-columns: 64px minmax(0,1fr); }
+  .feedrow .cls, .feedrow .ex { grid-column: 2; }
+}
+
+/* note box */
+.note { border-left: 3px solid var(--warn); }
+.note ul { margin: 6px 0 0; padding-left: 20px; color: var(--ink-2); }
+.note li { margin: 4px 0; }
+.note strong { color: var(--ink); }
+
+.footer { color: var(--muted); font-size: 11.5px; text-align: center; padding-top: 4px; }
+
+/* tooltip */
+.tooltip {
+  position: fixed; z-index: 50; max-width: 420px;
+  background: #1d242d; border: 1px solid var(--baseline);
+  border-radius: 8px; padding: 8px 11px;
+  font-size: 12px; color: var(--ink-2);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  pointer-events: none;
+}
+.tooltip .tt-title { color: var(--ink); font-weight: 650; margin-bottom: 2px; }
+.tooltip .tt-row { display: flex; gap: 8px; align-items: baseline; }
+.tooltip .tt-key { display: inline-block; width: 12px; height: 2px; border-radius: 1px; flex: none; vertical-align: middle; }
+.tooltip .tt-val { color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+.tooltip .tt-ex {
+  margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--hairline);
+  color: var(--muted); white-space: pre-wrap; word-break: break-word;
+  max-height: 130px; overflow: hidden; font-size: 11.5px;
+}
+
+/* svg common */
+svg text { font: 11px system-ui, -apple-system, "Segoe UI", "Hiragino Sans", sans-serif; fill: var(--muted); }
+svg .lane-label { fill: var(--ink); font-size: 12px; font-weight: 600; }
+svg .lane-sub { fill: var(--muted); font-size: 10.5px; }
+svg .gridline { stroke: var(--hairline); stroke-width: 1; }
+svg .axisline { stroke: var(--baseline); stroke-width: 1; }
+.marker-hit { cursor: pointer; }
+.marker-hit:focus { outline: none; }

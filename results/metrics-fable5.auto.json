@@ -1,0 +1,91 @@
+{
+  "arm": "fable5",
+  "auto": {
+    "blocking_wait_ms": 999157,
+    "blocking_wait_min": 16.7,
+    "rate_limit_excluded_min": 0.3,
+    "task_spawns": 4,
+    "send_messages": 8,
+    "task_notifications": 4,
+    "tokens_by_lane": {
+      "main": 37652,
+      "ac5cfc7de866fbc92": 37332,
+      "adf28e7b76c41f434": 66528,
+      "af539713fd08c05ad": 53717,
+      "a860086621b0a28b0": 37900
+    },
+    "worker_lanes": 4
+  },
+  "needs_human_review": {
+    "intervention_dropped_at": "2026-07-02T05:51:24.218Z",
+    "events_after_intervention": 347,
+    "mistaken_premise_detection_candidates": [
+      {
+        "ts": "2026-07-02T05:39:29.504Z",
+        "lane": "main",
+        "class": "user"
+      },
+      {
+        "ts": "2026-07-02T05:39:31.488Z",
+        "lane": "main",
+        "class": "user"
+      },
+      {
+        "ts": "2026-07-02T05:46:05.938Z",
+        "lane": "main",
+        "class": "user"
+      },
+      {
+        "ts": "2026-07-02T05:46:06.869Z",
+        "lane": "main",
+        "class": "user"
+      },
+      {
+        "ts": "2026-07-02T05:46:17.028Z",
+        "lane": "main",
+        "class": "assistant"
+      },
+      {
+        "ts": "2026-07-02T05:47:33.596Z",
+        "lane": "main",
+        "class": "task_spawn"
+      },
+      {
+        "ts": "2026-07-02T05:47:50.551Z",
+        "lane": "main",
+        "class": "assistant"
+      },
+      {
+        "ts": "2026-07-02T05:52:43.617Z",
+        "lane": "main",
+        "class": "send_message"
+      },
+      {
+        "ts": "2026-07-02T05:52:55.744Z",
+        "lane": "main",
+        "class": "assistant"
+      },
+      {
+        "ts": "2026-07-02T05:55:27.060Z",
+        "lane": "ac5cfc7de866fbc92",
+        "class": "send_message"
+      },
+      {
+        "ts": "2026-07-02T06:01:51.287Z",
+        "lane": "main",
+        "class": "user"
+      },
+      {
+        "ts": "2026-07-02T06:02:00.380Z",
+        "lane": "main",
+        "class": "assistant"
+      },
+      {
+        "ts": "2026-07-02T06:07:42.157Z",
+        "lane": "main",
+        "class": "assistant"
+      }
+    ],
+    "note": "②反映漏れ4項目・④統合失敗数は artifacts/ の成果物コードを静的確認して results/metrics.csv に手記入する"
+  }
+}
