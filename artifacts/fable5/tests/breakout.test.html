@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Breakout logic tests</title>
+<style>
+  body { font-family: monospace; background: #12141c; color: #e7e9f0; padding: 24px; }
+  h1 { font-size: 1.2rem; }
+  ul { list-style: none; padding: 0; }
+  li { padding: 6px 10px; margin-bottom: 4px; border-radius: 6px; }
+  li.pass { background: #17301f; color: #7be08a; }
+  li.fail { background: #331a1a; color: #ff8a8a; }
+  #summary { margin-top: 16px; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h1>Breakout pure-logic tests</h1>
+  <ul id="results"></ul>
+  <div id="summary"></div>
+
+  <!-- Note: no Arcade global exists on this page. breakout.js must not
+       throw when loaded here (registerScreen call is guarded). -->
+  <script src="../games/breakout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var resultsEl = document.getElementById('results');
+    var summaryEl = document.getElementById('summary');
+    var pass = 0;
+    var fail = 0;
+
+    function report(name, ok, detail) {
+      var li = document.createElement('li');
+      li.className = ok ? 'pass' : 'fail';
+      li.textContent = (ok ? 'PASS' : 'FAIL') + ' - ' + name + (detail ? ' (' + detail + ')' : '');
+      resultsEl.appendChild(li);
+      if (ok) pass++; else fail++;
+    }
+
+    function assert(name, condition, detail) {
+      report(name, !!condition, detail);
+    }
+
+    function approxEqual(a, b, eps) {
+      eps = typeof eps === 'number' ? eps : 1e-6;
+      return Math.abs(a - b) <= eps;
+    }
+
+    var L = window.BreakoutLogic;
+
+    // 1. BreakoutLogic loaded and Arcade absence didn't throw (this script
+    //    running at all is proof breakout.js didn't throw on load).
+    assert('BreakoutLogic is exposed on window', typeof L === 'object' && L !== null);
+
+    // 2. Level data integrity: 3 levels, each with at least one brick, and
+    //    layouts differ (different brick counts) across levels.
+    (function () {
+      var counts = L.LEVELS.map(function (lvl, i) {
+        return L.buildBricks(i).length;
+      });
+      var allPositive = counts.every(function (c) { return c > 0; });
+      var distinctLayouts = new Set(counts).size > 1 || (function () {
+        // even if counts collide, compare actual coordinates
+        var a = JSON.stringify(L.buildBricks(0).map(function (b) { return [b.row, b.col]; }));
+        var b = JSON.stringify(L.buildBricks(1).map(function (b) { return [b.row, b.col]; }));
+        return a !== b;
+      })();
+      assert(
+        'Exactly 3 levels, each with bricks, layouts differ',
+        L.LEVELS.length === 3 && allPositive && distinctLayouts,
+        'counts=' + counts.join(',')
+      );
+    })();
+
+    // 3. Brick coordinates stay within canvas bounds for every level.
+    (function () {
+      var ok = true;
+      for (var i = 0; i < L.LEVELS.length; i++) {
+        L.buildBricks(i).forEach(function (b) {
+          if (b.x < 0 || b.x + b.w > L.CANVAS_WIDTH || b.y < 0) ok = false;
+        });
+      }
+      assert('All bricks stay within canvas width for every level', ok);
+    })();
+
+    // 4. Score calc: brick points increase with row and with level, and are
+    //    summed correctly into state.score by stepGame-style accounting.
+    (function () {
+      var p00 = L.computeBrickPoints(0, 0);
+      var p10 = L.computeBrickPoints(1, 0);
+      var p01 = L.computeBrickPoints(0, 1);
+      assert(
+        'computeBrickPoints increases with row and level',
+        p10 > p00 && p01 > p00,
+        'p00=' + p00 + ' p10=' + p10 + ' p01=' + p01
+      );
+    })();
+
+    // 5. Level clear bonus grows with level index and remaining lives.
+    (function () {
+      var b0 = L.computeLevelClearBonus(0, 3);
+      var b1 = L.computeLevelClearBonus(1, 3);
+      var b0Low = L.computeLevelClearBonus(0, 1);
+      assert(
+        'computeLevelClearBonus increases with level and with lives remaining',
+        b1 > b0 && b0 > b0Low,
+        'b0=' + b0 + ' b1=' + b1 + ' b0Low=' + b0Low
+      );
+    })();
+
+    // 6. Paddle reflection: center hit sends the ball straight up (vx~0);
+    //    hitting the edges bends the angle left/right, magnitude preserved.
+    (function () {
+      var speed = 240;
+      var paddleX = 100;
+      var paddleWidth = 84;
+      var center = paddleX + paddleWidth / 2;
+
+      var mid = L.reflectOffPaddle(center, paddleX, paddleWidth, speed);
+      var right = L.reflectOffPaddle(paddleX + paddleWidth, paddleX, paddleWidth, speed);
+      var left = L.reflectOffPaddle(paddleX, paddleX, paddleWidth, speed);
+
+      var midOk = approxEqual(mid.vx, 0, 1e-6) && mid.vy < 0;
+      var rightOk = right.vx > 0 && right.vy < 0;
+      var leftOk = left.vx < 0 && left.vy < 0;
+      var magMid = Math.sqrt(mid.vx * mid.vx + mid.vy * mid.vy);
+      var magRight = Math.sqrt(right.vx * right.vx + right.vy * right.vy);
+      var magOk = approxEqual(magMid, speed, 1e-6) && approxEqual(magRight, speed, 1e-6);
+
+      assert(
+        'reflectOffPaddle: center=straight up, edges bend left/right, speed preserved',
+        midOk && rightOk && leftOk && magOk,
+        'mid=' + JSON.stringify(mid) + ' right=' + JSON.stringify(right) + ' left=' + JSON.stringify(left)
+      );
+    })();
+
+    // 7. circleRectCollision: true when overlapping, false when far apart.
+    (function () {
+      var hit = L.circleRectCollision(50, 50, 5, 48, 48, 10, 10);
+      var miss = L.circleRectCollision(0, 0, 5, 100, 100, 10, 10);
+      assert('circleRectCollision detects overlap and non-overlap correctly', hit === true && miss === false);
+    })();
+
+    // 8. resolveBrickBounce: hitting from directly above flips vy (vertical
+    //    bounce); hitting from the side flips vx (horizontal bounce).
+    (function () {
+      var brick = { x: 100, y: 100, w: 40, h: 20 };
+      var ballFromAbove = { x: 120, y: 95, vx: 0, vy: 200 };
+      var ballFromSide = { x: 95, y: 110, vx: 150, vy: 10 };
+      var vertical = L.resolveBrickBounce(ballFromAbove, brick);
+      var horizontal = L.resolveBrickBounce(ballFromSide, brick);
+      assert(
+        'resolveBrickBounce flips the correct axis depending on hit side',
+        vertical.vy === -200 && vertical.vx === 0 && horizontal.vx === -150 && horizontal.vy === 10,
+        'vertical=' + JSON.stringify(vertical) + ' horizontal=' + JSON.stringify(horizontal)
+      );
+    })();
+
+    // 9. stepGame simulation: ball bounces off the paddle (vy sign flips
+    //    from downward to upward on the frame it touches the paddle).
+    (function () {
+      var state = L.createInitialState();
+      // Force the ball to be falling right onto the paddle center.
+      state.ball.x = state.paddleX + state.paddleWidth / 2;
+      state.ball.y = L.PADDLE_Y - state.ball.radius - 1;
+      state.ball.vx = 0;
+      state.ball.vy = 50; // moving down, small enough that one step reaches paddle
+      var result = L.stepGame(state, 0.05, {});
+      assert(
+        'stepGame: ball bounces upward off the paddle',
+        result.events.indexOf('paddleHit') !== -1 && result.state.ball.vy < 0,
+        'events=' + result.events.join(',') + ' vy=' + result.state.ball.vy
+      );
+    })();
+
+    // 10. stepGame simulation: a brick is destroyed and score increases,
+    //     reducing the alive brick count.
+    (function () {
+      var state = L.createInitialState();
+      var before = L.countAliveBricks(state.bricks);
+      var target = state.bricks[0];
+      state.ball.x = target.x + target.w / 2;
+      state.ball.y = target.y + target.h + state.ball.radius - 1;
+      state.ball.vx = 0;
+      state.ball.vy = -10; // moving up into the brick
+      var scoreBefore = state.score;
+      var result = L.stepGame(state, 0.05, {});
+      var after = L.countAliveBricks(result.state.bricks);
+      assert(
+        'stepGame: brick destruction reduces alive count and increases score',
+        result.events.indexOf('brickDestroyed') !== -1 && after === before - 1 && result.state.score > scoreBefore,
+        'before=' + before + ' after=' + after + ' score=' + result.state.score
+      );
+    })();
+
+    // 11. stepGame simulation: dropping the ball below the paddle reduces
+    //     lives by 1, and reaching 0 lives sets status to 'gameover'.
+    (function () {
+      var state = L.createInitialState();
+      state.lives = 1;
+      state.ball.x = 100;
+      state.ball.y = L.CANVAS_HEIGHT - 5;
+      state.ball.vx = 0;
+      state.ball.vy = 500; // falls straight through the bottom next step
+      var result = L.stepGame(state, 0.05, {});
+      assert(
+        'stepGame: losing the last life ends the game (status=gameover)',
+        result.events.indexOf('lifeLost') !== -1 &&
+          result.events.indexOf('gameOver') !== -1 &&
+          result.state.status === 'gameover' &&
+          result.state.lives === 0,
+        'events=' + result.events.join(',') + ' status=' + result.state.status
+      );
+    })();
+
+    // 12. stepGame simulation: clearing every brick on a non-final level
+    //     advances to the next level (bricks rebuilt, ball reset, status
+    //     still 'playing').
+    (function () {
+      var state = L.createInitialState(); // level 0
+      state.bricks.forEach(function (b) { b.alive = false; });
+      // leave exactly one brick alive, then destroy it via stepGame
+      var last = state.bricks[state.bricks.length - 1];
+      last.alive = true;
+      state.ball.x = last.x + last.w / 2;
+      state.ball.y = last.y + last.h + state.ball.radius - 1;
+      state.ball.vx = 0;
+      state.ball.vy = -10;
+      var result = L.stepGame(state, 0.05, {});
+      assert(
+        'stepGame: clearing all bricks advances to the next level',
+        result.events.indexOf('nextLevel') !== -1 &&
+          result.state.level === 1 &&
+          result.state.status === 'playing' &&
+          L.countAliveBricks(result.state.bricks) === L.buildBricks(1).length,
+        'events=' + result.events.join(',') + ' level=' + result.state.level
+      );
+    })();
+
+    // 13. stepGame simulation: clearing the final level's bricks sets
+    //     status to 'allclear' instead of advancing further.
+    (function () {
+      var state = L.createInitialState();
+      state.level = L.LEVELS.length - 1;
+      state.bricks = L.buildBricks(state.level);
+      state.bricks.forEach(function (b) { b.alive = false; });
+      var last = state.bricks[state.bricks.length - 1];
+      last.alive = true;
+      state.ball.x = last.x + last.w / 2;
+      state.ball.y = last.y + last.h + state.ball.radius - 1;
+      state.ball.vx = 0;
+      state.ball.vy = -10;
+      var result = L.stepGame(state, 0.05, {});
+      assert(
+        'stepGame: clearing the last level sets status to allclear',
+        result.events.indexOf('allClear') !== -1 && result.state.status === 'allclear',
+        'events=' + result.events.join(',') + ' status=' + result.state.status
+      );
+    })();
+
+    // 14. Difficulty: easy/normal/hard produce different starting lives.
+    (function () {
+      var easy = L.createInitialState('easy');
+      var normal = L.createInitialState('normal');
+      var hard = L.createInitialState('hard');
+      assert(
+        'Difficulty changes starting lives (easy > normal > hard)',
+        easy.lives === 5 && normal.lives === 3 && hard.lives === 2 &&
+          easy.lives > normal.lives && normal.lives > hard.lives,
+        'easy=' + easy.lives + ' normal=' + normal.lives + ' hard=' + hard.lives
+      );
+    })();
+
+    // 15. Difficulty: initial ball speed scales by the difficulty multiplier
+    //     (easy slower than normal, hard faster than normal).
+    (function () {
+      var easy = L.createInitialState('easy');
+      var normal = L.createInitialState('normal');
+      var hard = L.createInitialState('hard');
+      function ballSpeed(s) { return Math.hypot(s.ball.vx, s.ball.vy); }
+      var eSpd = ballSpeed(easy), nSpd = ballSpeed(normal), hSpd = ballSpeed(hard);
+      var baseNormal = L.ballSpeedForLevel(0, 1);
+      assert(
+        'Difficulty scales initial ball speed (easy < normal < hard)',
+        approxEqual(eSpd, baseNormal * 0.8) && approxEqual(nSpd, baseNormal) && approxEqual(hSpd, baseNormal * 1.3) &&
+          eSpd < nSpd && nSpd < hSpd,
+        'easy=' + eSpd.toFixed(1) + ' normal=' + nSpd.toFixed(1) + ' hard=' + hSpd.toFixed(1)
+      );
+    })();
+
+    // 16. Difficulty: multiplier is applied on every level and after ball
+    //     resets, and an unknown/omitted difficulty falls back to normal.
+    (function () {
+      var hard = L.createInitialState('hard');
+      hard.level = 2;
+      // speed for level 2 on hard should equal base level-2 speed * 1.3
+      var hardL2 = L.ballSpeedForLevel(2, hard.speedMultiplier);
+      var baseL2 = L.ballSpeedForLevel(2, 1);
+      var fallback = L.createInitialState('nonsense');
+      var normal = L.createInitialState('normal');
+      assert(
+        'Difficulty multiplier applies per-level; unknown difficulty falls back to normal',
+        approxEqual(hardL2, baseL2 * 1.3) &&
+          fallback.difficulty === 'normal' &&
+          fallback.lives === normal.lives &&
+          approxEqual(fallback.speedMultiplier, normal.speedMultiplier),
+        'hardL2=' + hardL2.toFixed(1) + ' fallback=' + fallback.difficulty
+      );
+    })();
+
+    summaryEl.textContent = pass + ' passed, ' + fail + ' failed (total ' + (pass + fail) + ')';
+    summaryEl.style.color = fail === 0 ? '#7be08a' : '#ff8a8a';
+  })();
+  </script>
+</body>
+</html>

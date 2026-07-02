@@ -1,0 +1,4 @@
+8cbb8cd feat: ゲーム3種(breakout/reflex/records)+難易度対応の統合完成
+9f66032 feat(T1): core.js に難易度(easy/normal/hard)対応を追加 (v2)
+f6d81a6 feat(T1): 共通シェル(index.html) + 状態管理(core.js)を実装
+60151b2 chore: initial workspace (identical across arms)

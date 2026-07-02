@@ -1,0 +1,4 @@
+935cabd feat(difficulty): add easy/normal/hard to all games
+d01cb46 feat(core+games): per-difficulty core.js v2, breakout, reflex, records
+a347f54 feat(T1): arcade shell (index.html) and shared state API (core.js)
+887f8f5 chore: initial workspace (identical across arms)

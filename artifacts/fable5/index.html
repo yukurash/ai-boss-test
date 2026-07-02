@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Game Arcade</title>
+<style>
+  :root {
+    --bg: #12141c;
+    --bg-panel: #1a1d29;
+    --bg-panel-hover: #21253490;
+    --border: #2c3040;
+    --text: #e7e9f0;
+    --text-dim: #9096a8;
+    --accent: #5b8cff;
+    --accent-hover: #7ba0ff;
+    --danger: #ff6b6b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .arcade-header {
+    width: 100%;
+    text-align: center;
+    padding: 32px 16px 8px;
+  }
+
+  .arcade-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    margin: 4px 0 0;
+    font-size: 0.95rem;
+  }
+
+  .screen {
+    width: 100%;
+    max-width: 640px;
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .screen[hidden] {
+    display: none;
+  }
+
+  .menu-list {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text);
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--bg-panel-hover);
+    border-color: var(--accent);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn-menu {
+    font-weight: 600;
+  }
+
+  .btn-disabled,
+  .btn:disabled {
+    color: var(--text-dim);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    align-self: flex-start;
+  }
+
+  .btn-secondary:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
+  .game-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .game-screen-title {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .game-container {
+    flex: 1;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  footer {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    padding: 16px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+  <header class="arcade-header">
+    <h1>Mini Game Arcade</h1>
+  </header>
+
+  <main id="menu-screen" class="screen">
+    <p class="subtitle">プレイするゲームを選んでください</p>
+    <div id="menu-list" class="menu-list"></div>
+  </main>
+
+  <main id="game-screen" class="screen" hidden>
+    <div class="game-toolbar">
+      <button id="back-to-menu-btn" class="btn btn-secondary" type="button">&larr; Menu</button>
+      <span id="game-screen-title" class="game-screen-title"></span>
+    </div>
+    <div id="game-container" class="game-container"></div>
+  </main>
+
+  <footer>Mini Game Arcade &mdash; local play, no server required</footer>
+
+  <script src="core.js"></script>
+  <script src="games/breakout.js"></script>
+  <script src="games/reflex.js"></script>
+  <script src="games/records.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      // Screens the arcade always knows about, even before their game
+      // script has been written. If a screen with this id has been
+      // registered via Arcade.registerScreen, its real button is shown
+      // instead of the placeholder.
+      var KNOWN_SCREENS = [
+        { id: 'breakout', title: 'Breakout' },
+        { id: 'reflex', title: 'Reflex' },
+        { id: 'records', title: 'Records' }
+      ];
+
+      var menuScreenEl = document.getElementById('menu-screen');
+      var gameScreenEl = document.getElementById('game-screen');
+      var menuListEl = document.getElementById('menu-list');
+      var gameContainerEl = document.getElementById('game-container');
+      var gameTitleEl = document.getElementById('game-screen-title');
+      var backBtn = document.getElementById('back-to-menu-btn');
+
+      var currentScreen = null;
+
+      function getRegisteredScreens() {
+        if (window.Arcade && typeof window.Arcade.getScreens === 'function') {
+          return window.Arcade.getScreens();
+        }
+        return [];
+      }
+
+      function buildMenuItems() {
+        var registered = getRegisteredScreens();
+        var seenIds = {};
+        var items = registered.map(function (screen) {
+          seenIds[screen.id] = true;
+          return { id: screen.id, label: screen.title, enabled: true, screen: screen };
+        });
+
+        KNOWN_SCREENS.forEach(function (known) {
+          if (!seenIds[known.id]) {
+            items.push({
+              id: known.id,
+              label: known.title + ' (準備中)',
+              enabled: false,
+              screen: null
+            });
+          }
+        });
+
+        return items;
+      }
+
+      function showMenu() {
+        if (currentScreen && typeof currentScreen.unmount === 'function') {
+          try {
+            currentScreen.unmount();
+          } catch (e) {
+            console.error('Arcade shell: unmount() threw for screen "' + currentScreen.id + '"', e);
+          }
+        }
+        currentScreen = null;
+        gameContainerEl.innerHTML = '';
+        gameScreenEl.hidden = true;
+        menuScreenEl.hidden = false;
+      }
+
+      function openScreen(screen) {
+        currentScreen = screen;
+        menuScreenEl.hidden = true;
+        gameScreenEl.hidden = false;
+        gameTitleEl.textContent = screen.title;
+        gameContainerEl.innerHTML = '';
+        try {
+          screen.mount(gameContainerEl);
+        } catch (e) {
+          console.error('Arcade shell: mount() threw for screen "' + screen.id + '"', e);
+        }
+      }
+
+      function renderMenu() {
+        menuListEl.innerHTML = '';
+        buildMenuItems().forEach(function (item) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-menu';
+          btn.textContent = item.label;
+          if (!item.enabled) {
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+          } else {
+            btn.addEventListener('click', function () {
+              openScreen(item.screen);
+            });
+          }
+          menuListEl.appendChild(btn);
+        });
+      }
+
+      backBtn.addEventListener('click', showMenu);
+
+      renderMenu();
+    })();
+  </script>
+</body>
+</html>

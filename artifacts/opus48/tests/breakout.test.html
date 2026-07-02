@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Breakout 簡易テスト</title>
+<style>
+  body { font-family: "Segoe UI", sans-serif; background: #10131a; color: #e8ecf4; padding: 24px; }
+  h1 { font-size: 1.2rem; }
+  #summary { font-size: 1.1rem; margin: 16px 0; padding: 10px 14px; border-radius: 6px; }
+  .pass-all { background: #16351f; color: #7be59a; }
+  .fail-some { background: #3a1620; color: #ff8a8a; }
+  ul { list-style: none; padding: 0; }
+  li { padding: 6px 10px; border-bottom: 1px solid #232a3a; font-family: Consolas, monospace; font-size: 0.9rem; }
+  .ok { color: #7be59a; }
+  .ng { color: #ff8a8a; }
+</style>
+</head>
+<body>
+
+<h1>Breakout 純粋ロジック テスト (window.BreakoutLogic)</h1>
+<div id="summary">実行中...</div>
+<ul id="results"></ul>
+
+<!-- BreakoutLogic は games/breakout.js から公開される。DOM操作は onEnter が呼ばれるまで発生しない。 -->
+<script src="../games/breakout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var results = [];
+  var passCount = 0;
+  var failCount = 0;
+
+  function assert(name, condition, detail) {
+    var ok = !!condition;
+    if (ok) passCount++; else failCount++;
+    results.push({ name: name, ok: ok, detail: detail || '' });
+  }
+
+  function approxEqual(a, b, eps) {
+    eps = eps === undefined ? 0.001 : eps;
+    return Math.abs(a - b) <= eps;
+  }
+
+  var L = window.BreakoutLogic;
+
+  // 1. BreakoutLogic が公開されていること
+  assert('BreakoutLogic がグローバルに公開されている', !!L, typeof L);
+
+  if (L) {
+    // 2. レベル数は3、各レベルにブロックが1個以上あること
+    var counts = [];
+    var ok3Levels = (L.LEVEL_DEFS.length === 3);
+    for (var i = 0; i < L.LEVEL_DEFS.length; i++) {
+      var blocks = L.buildBlocksForLevel(i);
+      counts.push(blocks.length);
+      ok3Levels = ok3Levels && blocks.length > 0;
+    }
+    assert('レベルは3面あり、各レベルに1個以上ブロックが生成される', ok3Levels, 'counts=' + JSON.stringify(counts));
+
+    // 3. レベルごとに配置(ブロック数)が異なる = 使い回しでないことの簡易確認
+    var uniqueCounts = Array.from(new Set(counts));
+    assert('レベルごとにブロック配置(数)が異なる', uniqueCounts.length === counts.length, 'counts=' + JSON.stringify(counts));
+
+    // 4. ブロック座標がすべて canvas 内に収まっている
+    var within = true;
+    var lvl0 = L.buildBlocksForLevel(0);
+    lvl0.forEach(function (b) {
+      if (b.x < 0 || b.y < 0 || b.x + b.w > L.CANVAS_W || b.y + b.h > L.CANVAS_H) within = false;
+    });
+    assert('ブロック座標が canvas の範囲内に収まっている(レベル1)', within);
+
+    // 5. clampPaddleX: 範囲外の値は境界にクランプされる
+    var clampedLow = L.clampPaddleX(-50, L.PADDLE_W, L.CANVAS_W);
+    var clampedHigh = L.clampPaddleX(9999, L.PADDLE_W, L.CANVAS_W);
+    assert('clampPaddleX: 左端未満は0にクランプされる', clampedLow === 0, 'got=' + clampedLow);
+    assert('clampPaddleX: 右端超過は canvasWidth-paddleWidth にクランプされる',
+      clampedHigh === (L.CANVAS_W - L.PADDLE_W), 'got=' + clampedHigh);
+
+    // 6. paddleBounceVelocity: 中央ヒットはほぼ真上に跳ね返り、速度の大きさが保存される
+    var speed = 300;
+    var centerBounce = L.paddleBounceVelocity(0, speed);
+    var centerMag = Math.sqrt(centerBounce.vx * centerBounce.vx + centerBounce.vy * centerBounce.vy);
+    assert('paddleBounceVelocity: 中央ヒットは vx が概ね0、vy が上向き(負)',
+      approxEqual(centerBounce.vx, 0, 0.5) && centerBounce.vy < 0,
+      JSON.stringify(centerBounce));
+    assert('paddleBounceVelocity: 速度の大きさが保存される(エネルギー保存)',
+      approxEqual(centerMag, speed, 0.5), 'mag=' + centerMag);
+
+    // 7. パドルの当たり位置で反射角が変わること(受入基準4の核心)
+    var leftBounce = L.paddleBounceVelocity(-1, speed);
+    var rightBounce = L.paddleBounceVelocity(1, speed);
+    assert('paddleBounceVelocity: 左端ヒットは vx が負(左方向)になる', leftBounce.vx < 0, JSON.stringify(leftBounce));
+    assert('paddleBounceVelocity: 右端ヒットは vx が正(右方向)になる', rightBounce.vx > 0, JSON.stringify(rightBounce));
+    assert('paddleBounceVelocity: 当たり位置が異なれば反射角(vx)も異なる',
+      leftBounce.vx !== centerBounce.vx && rightBounce.vx !== centerBounce.vx && leftBounce.vx !== rightBounce.vx,
+      'left=' + leftBounce.vx + ' center=' + centerBounce.vx + ' right=' + rightBounce.vx);
+
+    // 8. circleRectIntersect: 重なっている/いないケース
+    var hit = L.circleRectIntersect(10, 10, 5, 8, 8, 10, 10);
+    var miss = L.circleRectIntersect(100, 100, 5, 8, 8, 10, 10);
+    assert('circleRectIntersect: 重なっている場合は true', hit === true);
+    assert('circleRectIntersect: 離れている場合は false', miss === false);
+
+    // 9. resolveBlockCollision: 上下からの衝突で vy が反転する
+    var ballDown = { x: 15, y: 5, r: 5, vx: 0, vy: 200 };
+    var rect = { x: 5, y: 10, w: 20, h: 10 };
+    var reflDown = L.resolveBlockCollision(ballDown, rect);
+    assert('resolveBlockCollision: 縦方向の衝突で vy の符号が反転する', reflDown.vy === -ballDown.vy, JSON.stringify(reflDown));
+
+    // 10. allBlocksDestroyed
+    var mixedBlocks = [{ alive: false }, { alive: false }, { alive: true }];
+    var allDeadBlocks = [{ alive: false }, { alive: false }];
+    assert('allBlocksDestroyed: 生存ブロックがあれば false', L.allBlocksDestroyed(mixedBlocks) === false);
+    assert('allBlocksDestroyed: 全滅していれば true', L.allBlocksDestroyed(allDeadBlocks) === true);
+
+    // 11. levelClearBonus: レベルが進むほどボーナスが増える
+    var b0 = L.levelClearBonus(0), b1 = L.levelClearBonus(1), b2 = L.levelClearBonus(2);
+    assert('levelClearBonus: レベルが進むほどボーナスが増加する', b0 < b1 && b1 < b2, 'b0=' + b0 + ' b1=' + b1 + ' b2=' + b2);
+
+    // 12. computeBlockScore: 耐久2ブロックは耐久1ブロックより得点が高い
+    var scoreHp1 = L.computeBlockScore({ maxHp: 1 });
+    var scoreHp2 = L.computeBlockScore({ maxHp: 2 });
+    assert('computeBlockScore: 耐久が高いブロックほど得点が高い', scoreHp2 > scoreHp1, 'hp1=' + scoreHp1 + ' hp2=' + scoreHp2);
+
+    // 13. Breakout ライフサイクルAPIが正しい形で公開されている
+    assert('window.Breakout.onEnter / onExit が関数として公開されている',
+      window.Breakout && typeof window.Breakout.onEnter === 'function' && typeof window.Breakout.onExit === 'function');
+
+    // ---- 難易度対応（仕様変更）--------------------------------------------
+
+    // 14. 難易度定義が easy/normal/hard の3種、デフォルトは normal
+    assert('DIFFICULTIES は [easy, normal, hard]',
+      JSON.stringify(L.DIFFICULTIES) === JSON.stringify(['easy', 'normal', 'hard']), JSON.stringify(L.DIFFICULTIES));
+    assert('DEFAULT_DIFFICULTY は normal', L.DEFAULT_DIFFICULTY === 'normal', L.DEFAULT_DIFFICULTY);
+
+    // 15. livesForDifficulty: easy=5, normal=3, hard=2（difficulty で初期ライフが異なる）
+    var lEasy = L.livesForDifficulty('easy');
+    var lNormal = L.livesForDifficulty('normal');
+    var lHard = L.livesForDifficulty('hard');
+    assert('livesForDifficulty: easy=5 / normal=3 / hard=2',
+      lEasy === 5 && lNormal === 3 && lHard === 2, 'easy=' + lEasy + ' normal=' + lNormal + ' hard=' + lHard);
+    assert('livesForDifficulty: 難易度が上がるほどライフが減る(easy>normal>hard)',
+      lEasy > lNormal && lNormal > lHard);
+
+    // 16. 未知/未指定の難易度は normal にフォールバック
+    assert('livesForDifficulty: 未知の難易度は normal 相当(=3)にフォールバック',
+      L.livesForDifficulty('impossible') === 3 && L.livesForDifficulty(undefined) === 3);
+    assert('normalizeDifficulty: 未知値は normal に正規化される',
+      L.normalizeDifficulty('xyz') === 'normal' && L.normalizeDifficulty('hard') === 'hard');
+
+    // 17. speedMultiplierForDifficulty: easy<normal<hard、normal は基準1.0
+    var mEasy = L.speedMultiplierForDifficulty('easy');
+    var mNormal = L.speedMultiplierForDifficulty('normal');
+    var mHard = L.speedMultiplierForDifficulty('hard');
+    assert('speedMultiplierForDifficulty: normal は基準1.0', mNormal === 1.0, 'normal=' + mNormal);
+    assert('speedMultiplierForDifficulty: easy<normal<hard(難易度が上がるほど速い)',
+      mEasy < mNormal && mNormal < mHard, 'easy=' + mEasy + ' normal=' + mNormal + ' hard=' + mHard);
+
+    // 18. ballSpeedForLevel: 同一レベルでも難易度でボール速度が異なる（easy<normal<hard）
+    var sEasy = L.ballSpeedForLevel(0, 'easy');
+    var sNormal = L.ballSpeedForLevel(0, 'normal');
+    var sHard = L.ballSpeedForLevel(0, 'hard');
+    assert('ballSpeedForLevel: 同一レベルで easy<normal<hard の速度になる',
+      sEasy < sNormal && sNormal < sHard, 'easy=' + sEasy + ' normal=' + sNormal + ' hard=' + sHard);
+
+    // 19. ballSpeedForLevel: 第2引数省略時は normal 相当（後方互換）
+    assert('ballSpeedForLevel: difficulty 省略時は normal 相当',
+      L.ballSpeedForLevel(0) === L.ballSpeedForLevel(0, 'normal'),
+      'omit=' + L.ballSpeedForLevel(0) + ' normal=' + L.ballSpeedForLevel(0, 'normal'));
+
+    // 20. ballSpeedForLevel: レベルが進むと同一難易度でも速くなる
+    assert('ballSpeedForLevel: 同一難易度でレベルが進むほど速くなる',
+      L.ballSpeedForLevel(0, 'normal') < L.ballSpeedForLevel(2, 'normal'));
+  }
+
+  // ---- 結果表示 ----------------------------------------------------------
+  var ul = document.getElementById('results');
+  results.forEach(function (r) {
+    var li = document.createElement('li');
+    li.className = r.ok ? 'ok' : 'ng';
+    li.textContent = (r.ok ? '[PASS] ' : '[FAIL] ') + r.name + (r.detail ? '  (' + r.detail + ')' : '');
+    ul.appendChild(li);
+  });
+
+  var summary = document.getElementById('summary');
+  var total = passCount + failCount;
+  summary.textContent = 'TOTAL ' + total + ' / PASS ' + passCount + ' / FAIL ' + failCount;
+  summary.className = failCount === 0 ? 'pass-all' : 'fail-some';
+
+  // Playwright 等の自動確認用に window に結果を残す
+  window.__BREAKOUT_TEST_RESULTS__ = { total: total, pass: passCount, fail: failCount, results: results };
+})();
+</script>
+
+</body>
+</html>
