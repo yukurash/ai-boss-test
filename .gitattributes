@@ -1,0 +1,4 @@
+# Sealed files are hash-locked (SHA256 in RULES.md); disable EOL conversion so
+# the committed bytes match the pre-registered hash exactly.
+ANSWERS.md -text
+interventions/spec-change.md -text

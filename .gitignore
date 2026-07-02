@@ -1,0 +1,19 @@
+# Sealed until after both runs (hashes are pre-registered in RULES.md)
+ANSWERS.md
+interventions/spec-change.md
+
+# Generated data stays unpublished until after BOTH runs complete.
+# Rationale: planning-meeting.json explains the trap design, and run outputs
+# could give a web-browsing PM model an advantage mid-run (diff-attack risk).
+# Un-ignore on publication day (7/15-16) once both runs are done.
+data/
+
+# Article drafts stay local (never published in this repo)
+article/
+
+# Raw logs and run workspaces (only sanitized JSON under data/ is public)
+runs/
+
+# OS noise
+Thumbs.db
+Desktop.ini
