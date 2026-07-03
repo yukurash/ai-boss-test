@@ -204,3 +204,30 @@ svg .gridline { stroke: var(--hairline); stroke-width: 1; }
 svg .axisline { stroke: var(--baseline); stroke-width: 1; }
 .marker-hit { cursor: pointer; }
 .marker-hit:focus { outline: none; }
+
+/* play links (artifacts) */
+.play-cta {
+  text-decoration: none; color: var(--ink);
+  background: var(--surface-2); border: 1px solid var(--baseline);
+  border-radius: 8px; padding: 7px 14px; font-weight: 700; font-size: 13px;
+  white-space: nowrap;
+}
+.play-cta:hover { border-color: var(--accent); color: var(--ink); }
+.play-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+.play-link {
+  flex: 1 1 200px; text-decoration: none;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 16px 18px;
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  border-left-width: 4px; border-radius: 10px;
+  color: var(--ink); transition: border-color .15s, transform .05s;
+}
+.play-link:hover { transform: translateY(-1px); }
+.play-arm { font-weight: 700; font-size: 15px; }
+.play-go { color: var(--ink-2); font-weight: 600; font-size: 13px; }
+.play-fable5 { border-left-color: #3987e5; }
+.play-fable5:hover { border-color: #3987e5; }
+.play-fable5:hover .play-go { color: #3987e5; }
+.play-opus48 { border-left-color: #d55181; }
+.play-opus48:hover { border-color: #d55181; }
+.play-opus48:hover .play-go { color: #d55181; }
