@@ -9,7 +9,6 @@
   const ARMS = [
     { id: 'fable5', label: 'Fable 5', file: 'run-fable5.json' },
     { id: 'opus48', label: 'Opus 4.8', file: 'run-opus48.json' },
-    { id: 'planning', label: 'Making of', file: 'planning-meeting.json' },
   ];
 
   // lane categorical slots (validated for the dark surface; fixed order, never cycled)
